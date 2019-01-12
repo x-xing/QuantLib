@@ -1194,7 +1194,7 @@ FUNCTIONS
     
     Leg_swigregister(...)
     
-    LevenbergMarquardt_swigregister(...)
+    fergMarquardt_swigregister(...)
     
     LexicographicalView_swigregister(...)
     

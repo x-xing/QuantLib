@@ -70,85 +70,135 @@ class ShortRateModelTest:
 
                 #error = (expected-calculated)/expected
                 print(expected)
-                
+
+    def testCachedHullWhite(self):
+        print("Testing Hull-White calibration against cached values using swaptions with start delay...")
+
+        today = Date(15, February, 2002)
+        settlement = Date(19, February, 2002)
+        Settings.instance().evaluationDate = today
+        termStructure = YieldTermStructureHandle(FlatForward(settlement,0.04875825, Actual365Fixed()))
+        model = HullWhite(termStructure)
+        #data element: [start, length, vol]
+        data = [[1, 5, 0.1148 ],
+                [2, 4, 0.1108 ],
+                [3, 3, 0.1070 ],
+                [4, 2, 0.1021 ],
+                [5, 1, 0.1000 ]] 
+        index = Euribor6M(termStructure)
+
+        engine = JamshidianSwaptionEngine(model)
+
+        swaptions = CalibrationHelperVector()
+        for row in data:
+            vol = SimpleQuote(row[2])
+            helper = SwaptionHelper(Period(row[0], Years),
+                                    Period(row[1], Years),
+                                    QuoteHandle(vol),
+                                    index,
+                                    Period(1, Years), Thirty360(),
+                                    Actual360(), termStructure)
+            helper.setPricingEngine(engine)
+            swaptions.push_back(helper)        
+
+        # Set up the optimization problem
+        # Real simplexLambda = 0.1
+        # Simplex optimizationMethod(simplexLambda)
+        optimizationMethod = LevenbergMarquardt(1.0e-8,1.0e-8,1.0e-8)
+        endCriteria = EndCriteria(10000, 100, 1e-6, 1e-8, 1e-8)
+
+        #Optimize
+        model.calibrate(swaptions, optimizationMethod, endCriteria)
+        ecType = model.endCriteria()
+
+        # Check and print out results
+        cachedA = 0.0464041
+        cachedSigma = 0.00579912
+        tolerance = 1.0e-5
+        xMinCalculated = model.params()
+        yMinCalculated = model.value(xMinCalculated, swaptions)
+        xMinExpected= [cachedA, cachedSigma]
+        yMinExpected = model.value(xMinExpected, swaptions)
+        if ((xMinCalculated[0]-cachedA) > tolerance) or ((xMinCalculated[1]-cachedSigma) > tolerance):
+            print(  "Failed to reproduce cached calibration results:\n")
+        print(  "calculated: a = ", xMinCalculated[0], ", "
+                "sigma = ", xMinCalculated[1], ", "
+                "f(a) = ", yMinCalculated, ",\n"
+                "expected:   a = ", xMinExpected[0], ", "
+                "sigma = ", xMinExpected[1], ", "
+                "f(a) = ", yMinExpected, ",\n"
+                "difference: a = ", xMinCalculated[0]-xMinExpected[0], ", "
+                "sigma = ", xMinCalculated[1]-xMinExpected[1], ", "
+                "f(a) = ", yMinCalculated - yMinExpected, ",\n"
+                "end criteria = ", ecType )
+    
+    def testCachedHullWhiteFixedReversion(self):
+        print("Testing Hull-White calibration with fixed reversion against cached values...")
+
+        today = Date(15, February, 2002)
+        settlement = Date(19, February, 2002)
+        Settings.instance().evaluationDate = today
+        termStructure = YieldTermStructureHandle(FlatForward(settlement,0.04875825, Actual365Fixed()))
+        model = HullWhite(termStructure,0.05,0.01)
+        data = [[1, 5, 0.1148],
+                [2, 4, 0.1108],
+                [3, 3, 0.1070],
+                [4, 2, 0.1021],
+                [5, 1, 0.1000]]
+        index = Euribor6M(termStructure)
+
+        engine = JamshidianSwaptionEngine(model)
+
+        swaptions = CalibrationHelperVector()
+        for row in data:
+            vol = SimpleQuote(row[2])
+            helper = SwaptionHelper(Period(row[0], Years),
+                                    Period(row[1], Years),
+                                    QuoteHandle(vol),
+                                    index,
+                                    Period(1, Years), 
+                                    Thirty360(),
+                                    Actual360(), termStructure)
+            helper.setPricingEngine(engine)
+            swaptions.push_back(helper)
+
+        # Set up the optimization problem
+        #Real simplexLambda = 0.1
+        #Simplex optimizationMethod(simplexLambda)
+        optimizationMethod = LevenbergMarquardt()
+        endCriteria = EndCriteria(1000,500,1E-8,1E-8,1E-8)
+
+        #Optimize
+        model.calibrate(swaptions, optimizationMethod, endCriteria, Constraint(), DoubleVector(), [False]*4+[True])
+        ecType = model.endCriteria()
+
+        # Check and print out results
+        cachedA = 0.05, 
+        cachedSigma = 0.00585858
+        tolerance = 1.0e-5
+        xMinCalculated = model.params()
+        yMinCalculated = model.value(xMinCalculated, swaptions)
+        xMinExpected= [cachedA, cachedSigma]
+        yMinExpected = model.value(xMinExpected, swaptions)
+        if ((xMinCalculated[0]-cachedA) > tolerance) or ((xMinCalculated[1]-cachedSigma) > tolerance):
+            print("Failed to reproduce cached calibration results:\n")
+        print(  "calculated: a = ", xMinCalculated[0], ", "
+                "sigma = ", xMinCalculated[1], ", "
+                "f(a) = ", yMinCalculated, ",\n"
+                "expected:   a = ", xMinExpected[0], ", "
+                "sigma = ", xMinExpected[1], ", "
+                "f(a) = ", yMinExpected, ",\n"
+                "difference: a = ", xMinCalculated[0]-xMinExpected[0], ", "
+                "sigma = ", xMinCalculated[1]-xMinExpected[1], ", "
+                "f(a) = ", yMinCalculated - yMinExpected, ",\n"
+                "end criteria = ", ecType )
+        
+
 srt = ShortRateModelTest()
 srt.testSwaps()
-
-#%%
-help(PricingEngine)
+srt.testCachedHullWhite()
+srt.testCachedHullWhiteFixedReversion()
 
 #%%
 
     
-
-    for (Size i=0; i<LENGTH(start); i++) {
-
-        Date startDate = calendar.advance(settlement,start[i],Months);
-        if (startDate < today) {
-            Date fixingDate = calendar.advance(startDate,-2,Days);
-            TimeSeries<Real> pastFixings;
-            pastFixings[fixingDate] = 0.03;
-            IndexManager::instance().setHistory(euribor->name(),
-                                                pastFixings);
-        }
-
-        for (Size j=0; j<LENGTH(length); j++) {
-
-            Date maturity = calendar.advance(startDate,length[i],Years);
-            Schedule fixedSchedule(startDate, maturity, Period(Annual),
-                                   calendar, Unadjusted, Unadjusted,
-                                   DateGeneration::Forward, false);
-            Schedule floatSchedule(startDate, maturity, Period(Semiannual),
-                                   calendar, Following, Following,
-                                   DateGeneration::Forward, false);
-            for (Size k=0; k<LENGTH(rates); k++) {
-
-                VanillaSwap swap(VanillaSwap::Payer, 1000000.0,
-                                 fixedSchedule, rates[k], Thirty360(),
-                                 floatSchedule, euribor, 0.0, Actual360());
-                swap.setPricingEngine(ext::shared_ptr<PricingEngine>(
-                                   new DiscountingSwapEngine(termStructure)));
-                Real expected = swap.NPV();
-                swap.setPricingEngine(engine);
-                Real calculated = swap.NPV();
-
-                Real error = std::fabs((expected-calculated)/expected);
-                if (error > tolerance) {
-                    BOOST_ERROR("Failed to reproduce swap NPV:"
-                                << std::fixed << std::setprecision(9)
-                                << "\n    calculated: " << calculated
-                                << "\n    expected:   " << expected
-                                << std::scientific
-                                << "\n    rel. error: " << error);
-                }
-            }
-        }
-    }
-    '''
-    static void testFuturesConvexityBias()
-    static void testCachedHullWhite();
-    static void testCachedHullWhiteFixedReversion();
-    static void testCachedHullWhite2();
-    static void testSwaps();
-    static void testExtendedCoxIngersollRossDiscountFactor();
-    static boost::unit_test_framework::test_suite* suite(SpeedLevel);
-    '''
-
-
-class Employee:
-   'Common base class for all employees'
-   empCount = 0
-
-   def __init__(self, name, salary):
-      self.name = name
-      self.salary = salary
-      Employee.empCount += 1
-   
-   def displayCount(self):
-     print "Total Employee %d" % Employee.empCount
-
-   def displayEmployee(self):
-      print "Name : ", self.name,  ", Salary: ", self.salary
-
-
-#%%

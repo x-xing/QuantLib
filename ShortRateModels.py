@@ -169,9 +169,9 @@ class ShortRateModelTest:
         endCriteria = EndCriteria(1000,500,1E-8,1E-8,1E-8)
 
         #Optimize
-        model.calibrate(swaptions, optimizationMethod, endCriteria, Constraint(), DoubleVector(), [False]*4+[True])
+        model.calibrate(swaptions, optimizationMethod, endCriteria, Constraint(), DoubleVector(), HullWhite.FixedReversion())
         ecType = model.endCriteria()
-
+        
         # Check and print out results
         cachedA = 0.05, 
         cachedSigma = 0.00585858
@@ -200,5 +200,9 @@ srt.testCachedHullWhite()
 srt.testCachedHullWhiteFixedReversion()
 
 #%%
+import QuantLib as ql
 
+help(ql)
     
+
+#%%

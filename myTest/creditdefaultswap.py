@@ -1,5 +1,6 @@
 from QuantLib import *
 import math
+import numpy as np
 
 class CreditDefaultSwapTest:
     def testCachedValue(self):
@@ -508,7 +509,7 @@ class CreditDefaultSwapTest:
         
 
         discountCurve = RelinkableYieldTermStructureHandle()
-        discountCurve.linkTo(PiecewiseLogCubicDiscount(0, 
+        discountCurve.linkTo(PiecewiseLogLinearDiscount(0, 
                                                         WeekendsOnly(), 
                                                         isdaRateHelpers, 
                                                         Actual365Fixed()))
@@ -568,19 +569,24 @@ class CreditDefaultSwapTest:
                                                       Actual365Fixed(),
                                                       r,
                                                       1e-10,
-                                                      CreditDefaultSwap. .ISDA)
+                                                      CreditDefaultSwap.ISDA)
 
-                    probabilityCurve.linkTo(FlatHazardRate(0, WeekendsOnly(), h, Actual365Fixed()))
+                    probabilityCurve.linkTo(FlatHazardRate(0, WeekendsOnly(), QuoteHandle(SimpleQuote(h)), Actual365Fixed()))
 
                     engine = IsdaCdsEngine(probabilityCurve, r, discountCurve,
                                         None, IsdaCdsEngine.Taylor, IsdaCdsEngine.HalfDayBias,
                                         IsdaCdsEngine.Piecewise)
 
-                    conventionalTrade = MakeCreditDefaultSwap(d, 0.01).withNominal(10000000.).withPricingEngine(engine)
+                    schedule = Schedule(tradeDate+Period(1,Days), d, Period(3, Months), 
+                            WeekendsOnly(), Following, Unadjusted, DateGeneration.CDS, 
+                            False, Date(), Date())
 
-                    BOOST_CHECK_CLOSE(conventionalTrade.notional() * conventionalTrade.fairUpfront(),
-                                    markitValues[l],
-                                    tolerance)
+                    conventionalTrade = CreditDefaultSwap(Protection.Buyer, 10000000., 0.0, 0.01,
+                            schedule, Following, Actual360(), True, True)
+                    conventionalTrade.setPricingEngine(engine)
+                    if np.abs(conventionalTrade.notional() * 
+                        conventionalTrade.fairUpfront() - markitValues[l]) < tolerance:
+                        print('Pass.')
 
                     l+=1                
 

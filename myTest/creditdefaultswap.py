@@ -435,8 +435,8 @@ class CreditDefaultSwapTest:
 
         if ((fairNPV) > tolerance):
             print("Failed to reproduce null NPV with calculated fair upfront")
-            print("calculated upfront: ", fairUpfront)
-            print("calculated NPV:     ", fairNPV)
+        print("calculated upfront: ", fairUpfront)
+        print("calculated NPV:     ", fairNPV)
 
         # same with null upfront to begin with
         upfront = 0.0
@@ -455,8 +455,8 @@ class CreditDefaultSwapTest:
 
         if ((fairNPV) > tolerance):
             print("Failed to reproduce null NPV with calculated fair upfront")
-            print("calculated upfront: ", fairUpfront)
-            print("calculated NPV:     ", fairNPV)
+        print("calculated upfront: ", fairUpfront)
+        print("calculated NPV:     ", fairNPV)
 
     def testIsdaEngine(self):
 
@@ -557,12 +557,16 @@ class CreditDefaultSwapTest:
             for s in spreads:
                 for r in recoveries:
 
-                    schedule = Schedule(tradeDate+Period(1,Days), d, Period(3, Months), 
-                            WeekendsOnly(), Following, Unadjusted, DateGeneration.CDS, 
+                    schedule = Schedule(tradeDate, d, Period(3, Months), 
+                            WeekendsOnly(), Following, Following, DateGeneration.TwentiethIMM, 
                             False, Date(), Date())
 
-                    quotedTrade = CreditDefaultSwap(Protection.Buyer, 10000000., 0.0, s,
-                            schedule, Following, Actual360(), True, True)
+                    notional = 10000000.
+                    upfront = 0.0
+                    convention = Following
+                    dayCount = Actual360()
+                    quotedTrade = CreditDefaultSwap(Protection.Buyer, notional, upfront, s,
+                            schedule, convention,dayCount, True, True)
 
                     h = quotedTrade.impliedHazardRate(0.,
                                                       discountCurve,
@@ -577,16 +581,12 @@ class CreditDefaultSwapTest:
                                         None, IsdaCdsEngine.Taylor, IsdaCdsEngine.HalfDayBias,
                                         IsdaCdsEngine.Piecewise)
 
-                    schedule = Schedule(tradeDate+Period(1,Days), d, Period(3, Months), 
-                            WeekendsOnly(), Following, Unadjusted, DateGeneration.CDS, 
-                            False, Date(), Date())
+                    conventionalTrade = CreditDefaultSwap(Protection.Buyer, notional, upfront, 0.01,
+                                                         schedule, convention, dayCount, True, True)
 
-                    conventionalTrade = CreditDefaultSwap(Protection.Buyer, 10000000., 0.0, 0.01,
-                            schedule, Following, Actual360(), True, True)
                     conventionalTrade.setPricingEngine(engine)
-                    if np.abs(conventionalTrade.notional() * 
-                        conventionalTrade.fairUpfront() - markitValues[l]) < tolerance:
-                        print('Pass.')
+                    print(conventionalTrade.notional() * 
+                        conventionalTrade.fairUpfront() - markitValues[l])
 
                     l+=1                
 

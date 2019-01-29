@@ -1,9 +1,9 @@
 from os import listdir
 from os.path import isfile, join
 
-mypath = 'C:/Library/QuantLib-SWIG-1.13/SWIG/'
+mypath = 'C:/Library/QuantLib-SWIG-1.13/Python/test/'
 files = [f for f in listdir(mypath) if isfile(join(mypath, f))]
-keyword = r'static const VanillaSwap::Type Receiver'
+keyword = r'Size'
 
 for file in files:
     with open(mypath + file, "r") as f:

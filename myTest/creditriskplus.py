@@ -11,17 +11,13 @@ class CreditRiskPlusTest:
 
         sector1Exposure = DoubleVector(1000, 1.0)
         sector1Pd = DoubleVector(1000, 0.04)
-        sector1Sector = DoubleVector(1000, 0)
+        sector1Sector = UnsignedIntVector(1000, 0)
 
-        sector2Exposure = DoubleVector(1000, 2.0)
+        '''sector2Exposure = DoubleVector(1000, 2.0)
         sector2Pd = DoubleVector(1000, 0.02)
         sector2Sector = DoubleVector(1000, 1)
 
-        exposure = DoubleVector()
-        exposure.insert(exposure.end(), sector1Exposure.begin(),
-                        sector1Exposure.end())
-        exposure.insert(exposure.end(), sector2Exposure.begin(),
-                        sector2Exposure.end())
+        exposure = sector1Exposure + sector2Exposure
 
         pd =  DoubleVector()
         pd.insert(pd.end(), sector1Pd.begin(), sector1Pd.end())
@@ -40,8 +36,14 @@ class CreditRiskPlusTest:
         
         unit = 0.1
 
-        cr = CreditRiskPlus(exposure, pd, sector, relativeDefaultVariance, rho, unit)
-
+        cr = CreditRiskPlus(exposure, pd, sector, relativeDefaultVariance, rho, unit)'''
+        relativeDefaultVariance = DoubleVector()
+        relativeDefaultVariance.push_back(0.75 * 0.75)
+        rho = [1]        
+        unit = 0.1
+        cr = CreditRiskPlus(sector1Exposure, sector1Pd, sector1Sector, relativeDefaultVariance, rho, unit)
+        print(cr.sectorExposures())
+'''
         if ( std::fabs(cr.sectorExposures()[0] - 1000.0) > tol )
             BOOST_FAIL("failed to reproduce sector 1 exposure ("
                     << cr.sectorExposures()[0] << ", should be 1000)");
@@ -96,4 +98,7 @@ test_suite *CreditRiskPlusTest::suite() {
     test_suite *suite = BOOST_TEST_SUITE("Credit risk plus tests");
     suite->add(QUANTLIB_TEST_CASE(&CreditRiskPlusTest::testReferenceValues));
     return suite;
-}
+}'''
+
+crp = CreditRiskPlusTest()
+crp.testReferenceValues()
